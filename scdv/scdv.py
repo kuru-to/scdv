@@ -7,6 +7,9 @@ import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer,HashingVectorizer
 from sklearn.mixture import GaussianMixture
 
+from scdv.word import Word
+from scdv.document import Document
+
 class SCDV():
     # ドキュメントのリスト
     documents = []
@@ -28,8 +31,6 @@ class SCDV():
         
         return
     
-    # 語彙のセッティング
-    # 入力
     # lst_lst_word 語彙となる単語のリストのリスト（文書ごと）
     def set_vocabulary(self, lst_lst_word):
         # 展開
@@ -44,10 +45,10 @@ class SCDV():
     # vocabulary の取得
     # str型のリストで出力する
     def get_vocabulary(self):
-        return [word.get_name() for word in self.vocabulary]
+        return [word.get_name() for word in self.vocabulary].copy()
     
     # vocabularyから削除する
-    # word 削除する単語.str型
+    # word 削除する単語. str型
     def remove_vocabulary(self, word):
         self.vocabulary = list(filter(lambda x: not x.match(word), self.vocabulary))
         return
@@ -91,7 +92,7 @@ class SCDV():
         for word in self.vocabulary:
             # word vector が作成されていれば格納
             try:
-                word_vector = self.get_word2VecModel()[word.name]
+                self.get_word2VecModel()[word.name]
                 word.set_vector(self.get_word2VecModel()[word.name])
             # word vector が作成されていない単語であれば、vocabulary から remove
             except:
@@ -100,8 +101,8 @@ class SCDV():
     
     # vocabulary からベクトルを出力する
     def get_word2Vec(self):
-        word_vectors = np.array(self.vocabulary[0].get_vector())
-        word_vectors = word_vectors.reshape([1,word_vectors.shape[0]])
+        word_vectors_tmp = np.array(self.vocabulary[0].get_vector())
+        word_vectors = word_vectors_tmp.reshape([1,word_vectors_tmp.shape[0]])
         for word in self.vocabulary[1:]:
             word_vectors = np.concatenate([word_vectors, word.get_vector().reshape([1,word_vectors.shape[1]])], axis=0)
         return word_vectors
@@ -152,8 +153,7 @@ class SCDV():
             word.set_cluster_probability(idx_proba[idx])
         return
     
-    # tf-idf を計算い、idf値をセット
-    # 入力
+    # tf-idf を計算し、idf値をセット
     # lst_lst_word 各文書ごとの単語リストのリスト
     def calc_idf_by_word(self, lst_lst_word):
         # 空白区切りの1つの文字列にする
@@ -188,19 +188,12 @@ class SCDV():
                 word.set_idf(idx)
             except:
                 self.remove_vocabulary(word.name)
-#         for word, idf in zip(lst_word,lst_idf):
-#             # vocabulary の単語と一致するのが何番目か格納しておく
-#             idx = self.get_vocabulary().index(word)
-#             # 対応するインデックスがわかったので値を格納する
-#             self.vocabulary[idx].set_idf(idf)
         
         return
     
     # 全単語に対して clustered_vector を算出
     def make_clustered_vector(self):
         for word in self.vocabulary:
-#             # idf値, word vector が作られているもののみ作る
-#             if word.get_idf() != 0 and word.get_vector().shape[0] != 0:
             word.set_clustered_vector(word.calc_clustered_vector())
         return
     
@@ -240,147 +233,35 @@ class SCDV():
             document.set_sparceMeanVector(document.calc_sparceMeanVector(self.threshold))
         return
     
+    # SCDV 実行して文書ベクトルの作成
+    def run(self, lst_lst_word):
+        self.set_vocabulary(lst_lst_word)
+
+        # word2vec 作成
+        self.make_word2VecModel(lst_lst_word)
+        self.set_word2Vec()
+
+        # cluster 作成
+        self.make_clusterModel()
+        self.set_cluster()
+
+        # idf 値算出
+        feature_names, idf = self.calc_idf_by_word(lst_lst_word)
+        self.set_idf(feature_names, idf)
+
+        # clustered_vector の算出
+        self.make_clustered_vector()
+
+        # Document セット
+        self.set_documents(lst_lst_word)
+
+        # 平均ベクトルセット
+        self.make_meanDocumentVector()
+
+        # sparce vector set
+        self.make_sparceDocumentVector()
+        return 
+
     # 文書idから sparce vector を出力する
-#     def get_sparceDocumentVector(self, idx):
-        
-    
-    
-# Dpcument クラス
-class Document():
-    # コンストラクタ
-    # 入力
-    # idx document id
-    # lst_word document に格納されている単語のリスト.str型
-    def __init__(self, idx, lst_word):
-        self.id = idx
-        self.words = lst_word
-        return
-    
-    # idを返す
-    def get_id(self):
-        return self.id
-    
-    # 単語のリストを返す
-    def get_words(self):
-        return [word.name for word in self.words]
-    
-    # 指定した単語がDocumentに存在するか確認する
-    # 入力
-    # word str型の単語
-    def isExist_word(self, word):
-        for word_class in self.words:
-            if word_class.match(word):
-                return True
-        return False
-    
-    # 所属する各単語を平均化する
-    def calc_meanWordVector(self):
-        count = 1
-        sumWordVector = self.words[0].get_clustered_vector()
-        for word in self.words[1:]:
-            sumWordVector = sumWordVector + word.get_clustered_vector()
-            count += 1
-        
-        return sumWordVector / count
-    
-    # 所属する各単語の平均ベクトルをセット
-    def set_meanWordVector(self, vec):
-        self.meanWordVector = vec
-        return
-    
-    # 平均ベクトルを取得
-    def get_meanWordVector(self):
-        return self.meanWordVector
-    
-    # 平均ベクトルをスパース化する
-    # 入力
-    # threshold 閾値.この値より絶対値が小さければ0にする
-    def calc_sparceMeanVector(self, threshold):
-        meanVector = self.get_meanWordVector()
-        return np.where(np.abs(meanVector)< threshold, 0, meanVector)
-    
-    # sparce vector をセット
-    def set_sparceMeanVector(self, vec):
-        self.sparceMeanVector = vec
-        return
-    
-    # sparce vector を取得
-    def get_sparceMeanVector(self):
-        return self.sparceMeanVector
-    
-    
-    
-# Word クラス
-class Word():
-    # コンストラクタ
-    # 入力
-    # word str型の単語
-    def __init__(self, word):
-        self.name = word.lower()
-        return
-    
-    # 単語のstr型を返す
-    def get_name(self):
-        return self.name
-    
-    # 与えられた文字列が一致するか確認する method
-    def match(self, word):
-        return self.name == word.lower()
-    
-    # word2vec で出力した vector をセットする
-    # 入力
-    # vector 数値ベクトル.リスト型でも可能
-    def set_vector(self, vector):
-        self.vector = np.array(vector)
-        return
-    
-    # vector を出力する
-    def get_vector(self):
-        return np.array(self.vector)
-    
-    # 所属確率最大の cluster のインデックスをセットする
-    def set_cluster_idx(self, idx):
-        self.cluster_idx = idx
-        return
-    
-    # cluster_idx を出力する
-    def get_cluster_idx(self):
-        return self.cluster_idx
-    
-    # 各clusterへの所属確率をセットする
-    # 入力
-    # probability numpy型
-    def set_cluster_probability(self, probability):
-        self.cluster_probability = probability
-        return
-    
-    # cluster_probability を出力する
-    def get_cluster_probability(self):
-        return self.cluster_probability
-    
-    # idf 値をセットする
-    def set_idf(self, idf):
-        self.idf = idf
-        return
-    
-    # idf 値を出力する
-    def get_idf(self):
-        return self.idf
-    
-    # 各 cluster への所属確率にidf値をかけたものをconcatnateしたベクトルを出力する
-    # 入力
-    # lst_clustered_prob 各クラスターへの所属確率のリスト
-    def calc_clustered_vector(self):        
-        # 各 cluster への所属確率にidf値をかけてconcatenate
-        clustered_vector = np.array([self.get_idf()*clustered_prob*self.get_vector() for clustered_prob in self.get_cluster_probability()]).flatten()
-        
-        return clustered_vector
-    
-    # clustered_vector のセット
-    def set_clustered_vector(self, clustered_vector):
-        self.clustered_vector = clustered_vector.copy()
-        return
-    
-    # clustered_vector の取得
-    def get_clustered_vector(self):
-        return self.clustered_vector
+    def get_sparceDocumentVector(self, idx):
+        return self.documents[idx].get_sparceMeanVector()
