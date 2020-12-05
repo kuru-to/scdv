@@ -10,12 +10,7 @@ from sklearn.mixture import GaussianMixture
 from scdv.word import Word
 from scdv.document import Document
 
-class SCDV():
-    # ドキュメントのリスト
-    documents = []
-    # vocabraly のリスト
-    vocabraly = []
-    
+class SCDV():    
     def __init__(self
                  , num_cluster=60 
                  , random_seed=0
@@ -42,19 +37,15 @@ class SCDV():
         self.vocabulary = [Word(word) for word in set(lst_word)]
         return
     
-    # vocabulary の取得
     # str型のリストで出力する
     def get_vocabulary(self):
         return [word.get_name() for word in self.vocabulary].copy()
     
-    # vocabularyから削除する
     # word 削除する単語. str型
     def remove_vocabulary(self, word):
         self.vocabulary = list(filter(lambda x: not x.match(word), self.vocabulary))
         return
         
-    # making word2vec
-    # Input
     # lst_lst_word 各Documentごとに1つのリストに単語をまとめたもののリスト. デフォルトでは空なので、Documentからとってくる
     def make_word2VecModel(self,
                         lst_lst_word,
@@ -107,7 +98,6 @@ class SCDV():
             word_vectors = np.concatenate([word_vectors, word.get_vector().reshape([1,word_vectors.shape[1]])], axis=0)
         return word_vectors
     
-    # clustering の値を算出
     def make_clusterModel(self):
         # 作成したモデルからとってくる
         word_vectors = self.get_word2Vec()
@@ -124,7 +114,6 @@ class SCDV():
         self.cluster_model = clf
         return
     
-    # clustering のモデルを取得する
     def get_clusterModel(self):
         try:
             clusterModel = self.cluster_model
@@ -132,7 +121,6 @@ class SCDV():
             assert False, "clustering model has not been made yet."
         return clusterModel
     
-    # clustering による値の算出
     def calc_cluster_probability(self):
         word_vectors = self.get_word2Vec()
         
@@ -143,7 +131,6 @@ class SCDV():
 
         return (idx, idx_proba)
     
-    # clustering の結果をセット
     def set_cluster(self):
         # clustering によって算出した値を使用する
         idx_cluster, idx_proba = self.calc_cluster_probability()
@@ -197,8 +184,6 @@ class SCDV():
             word.set_clustered_vector(word.calc_clustered_vector())
         return
     
-    # 文書のセッティング
-    # 入力
     # lst_lst_word 各Documentごとに1つのリストに単語をまとめたもののリスト
     def set_documents(self, lst_lst_word):
         self.documents = []
@@ -208,7 +193,6 @@ class SCDV():
             self.documents.append(Document(idx, lst_word_class))
         return
     
-    # Documents の取得
     def get_documents(self):
         return self.documents
     
