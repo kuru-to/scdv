@@ -1,0 +1,21 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+numpy = "*"
+pandas = "*"
+gensim = "*"
+sklearn = "*"
+
+[dev-packages]
+sphinx = "*"
+sphinx-rtd-theme = "*"
+
+[requires]
+python_version = "3.7"
+
+[scripts]
+test = "python -m unittest discover -v"
+docs = "sphinx-build ./docs ./docs/_build"

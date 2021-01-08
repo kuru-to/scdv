@@ -3,11 +3,9 @@
 """Tests for `scdv` package."""
 
 import unittest
-from click.testing import CliRunner
 import warnings
 
 from scdv.scdv import SCDV
-from scdv import cli
 
 class TestScdv(unittest.TestCase):
     """Tests for `scdv` package."""
@@ -353,17 +351,6 @@ class TestScdv(unittest.TestCase):
             except:
                 continue
         return
-        
-
-    def test_command_line_interface(self):
-        """Test the CLI."""
-        runner = CliRunner()
-        result = runner.invoke(cli.main)
-        assert result.exit_code == 0
-        assert 'scdv.cli.main' in result.output
-        help_result = runner.invoke(cli.main, ['--help'])
-        assert help_result.exit_code == 0
-        assert '--help  Show this message and exit.' in help_result.output
 
 if __name__ == "__main__":
     unittest.main()

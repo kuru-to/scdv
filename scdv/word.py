@@ -2,7 +2,7 @@
 import numpy as np
 
 # Word クラス
-class Word():
+class Word:
     # コンストラクタ
     # 入力
     # word str型の単語

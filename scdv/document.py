@@ -2,7 +2,7 @@
 import numpy as np
 
 # Dpcument クラス
-class Document():
+class Document:
     # コンストラクタ
     # 入力
     # idx document id

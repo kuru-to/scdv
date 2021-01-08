@@ -1,5 +1,13 @@
-"""Main module."""
-## create word2vec
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+""" Main module.
+
+Todo:
+    * init で設定される threshold はなんの閾値？
+    * 
+
+"""
+
 from gensim.models import Word2Vec
 from sklearn.preprocessing import normalize
 import numpy as np
@@ -10,29 +18,41 @@ from sklearn.mixture import GaussianMixture
 from scdv.word import Word
 from scdv.document import Document
 
-class SCDV():
-    # ドキュメントのリスト
-    documents = []
-    # vocabraly のリスト
-    vocabraly = []
-    
+class SCDV:
+    """ 
+    Doc2Vec の1手法である Sparce Composite Document Vectors の実装
+
+    Attributes:
+        num_cluster (:obj:`int`): クラスタ数
+        random_seed (:obj:`int`): 乱数の種
+        threshold (:obj:`int`): 閾値
+        embedding_dimension (:obj:`int`): Word vector dimensionality
+        max_iter (:obj:`int`) : Gausian Mixture Model 作成時の反復回数最大値
+    """
     def __init__(self
                  , num_cluster=60 
                  , random_seed=0
                  , threshold=0.01
-                 , embedding_dimension=200 # Word vector dimensionality
-                 , max_iter = 50           # Gausian Mixture Model 作成時の反復回数最大値
+                 , embedding_dimension=200 
+                 , max_iter = 50           
                 ):
         self.num_cluster = num_cluster
         self.random_seed = random_seed
         self.threshold = threshold
         self.embedding_dimension = embedding_dimension
         self.max_iter = max_iter
-        
         return
     
-    # lst_lst_word 語彙となる単語のリストのリスト（文書ごと）
     def set_vocabulary(self, lst_lst_word):
+        """ 
+        Setter of vocabulary
+ 
+        Args:
+            lst_lst_word (:obj:`list[list[Word]]`): 語彙となる単語のリストのリスト（文書ごと）
+
+        Attributes:
+            vocabulary (:obj:`list[Word]`): 登録された語彙の一覧
+        """
         # 展開
         lst_word = []
         for lst_input in lst_lst_word:
@@ -42,33 +62,54 @@ class SCDV():
         self.vocabulary = [Word(word) for word in set(lst_word)]
         return
     
-    # vocabulary の取得
-    # str型のリストで出力する
     def get_vocabulary(self):
+        """ 
+        Getter of vocabulary
+ 
+        Returns:
+            list[str] : 登録されている語彙の一覧
+        """
         return [word.get_name() for word in self.vocabulary].copy()
     
-    # vocabularyから削除する
-    # word 削除する単語. str型
     def remove_vocabulary(self, word):
+        """ 
+        語彙から削除する
+ 
+        Args:
+            word (:obj:`str`): 削除したい単語
+        """
         self.vocabulary = list(filter(lambda x: not x.match(word), self.vocabulary))
         return
-        
-    # making word2vec
-    # Input
-    # lst_lst_word 各Documentごとに1つのリストに単語をまとめたもののリスト. デフォルトでは空なので、Documentからとってくる
-    def make_word2VecModel(self,
-                        lst_lst_word,
-                        min_word_count = 0,   # Minimum word count
-                        num_workers = 1,      # Number of threads to run in parallel
-                        context = 1,          # Context window size
-                        downsampling = 1e-3    # Downsample setting for frequent words
+
+    def make_word2VecModel(self
+                        , lst_lst_word
+                        , min_word_count = 0
+                        , num_workers = 1
+                        , context = 1
+                        , downsampling = 1e-3
                         ):
+        """ 
+        Make word2vec
+
+        Args:
+            lst_lst_word (:obj:`list[list[Word]]`) : 各Documentごとに1つのリストに単語をまとめたもののリスト. デフォルトでは空なので、Documentからとってくる
+            min_word_count (:obj:`int`, optional)  : Minimum word count
+            num_workers (:obj:`int`, optional)     : Number of threads to run in parallel
+            context (:obj:`int`, optional)         : Context window size
+            downsampling (:obj:`float`, optional)  : Downsample setting for frequent words
+
+        Attributes:
+           word2vec (:obj:`Word2Vec`): lst_lst_word から作成した Word2Vec
+
+        Note:
+            word2vec のパラメータについては引数で対応. 足りなければ順次追加
+
+        """
         
         # 各Documentごとの単語のリストが与えられているので、そちらを使用する
         sentences = lst_lst_word.copy()
 
         print ("Training word2Vec model...")
-        # Train Word2Vec model.
         self.word2vec = Word2Vec(sentences, workers=num_workers, hs = 0, sg = 1, negative = 10, iter = 25,\
                     size=self.embedding_dimension, min_count = min_word_count, \
                     window = context, sample = downsampling, seed=self.random_seed)
@@ -235,6 +276,32 @@ class SCDV():
     
     # SCDV 実行して文書ベクトルの作成
     def run(self, lst_lst_word):
+        """ 
+        SCDV 実行して文書ベクトルの作成
+
+        Args:
+            lst_lst_word (:obj:`list[list[Word]]`) : 各Documentごとに1つのリストに単語をまとめたもののリスト
+
+        Returns:
+           戻り値の型: 戻り値の説明 (例 : True なら成功, False なら失敗.)
+
+        Raises:
+            例外の名前: 例外の説明 (例 : 引数が指定されていない場合に発生 )
+
+        Yields:
+           戻り値の型: 戻り値についての説明
+
+        Examples:
+
+            関数の使い方について記載
+
+            >>> print_test ("test", "message")
+               test message
+
+        Note:
+            注意事項などを記載
+
+        """
         self.set_vocabulary(lst_lst_word)
 
         # word2vec 作成
