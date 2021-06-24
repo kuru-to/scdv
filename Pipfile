@@ -6,16 +6,21 @@ name = "pypi"
 [packages]
 numpy = "*"
 pandas = "*"
-gensim = "*"
+gensim = "==3.8.3"
 sklearn = "*"
 
 [dev-packages]
 sphinx = "*"
 sphinx-rtd-theme = "*"
-
-[requires]
-python_version = "3.7"
+jupyter = "*"
+rise = "*"
+plotly = "*"
+jupyterlab = "*"
+flake8 = "*"
+autopep8 = "*"
 
 [scripts]
 test = "python -m unittest discover -v"
 docs = "sphinx-build ./docs ./docs/_build"
+jupyternotebook = "jupyter notebook --allow-root"
+jupyterlab = "jupyter lab --allow-root"

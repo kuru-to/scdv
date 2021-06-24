@@ -1,77 +1,63 @@
 """Sub module."""
 import numpy as np
+from collections import UserString
 
-# Word クラス
-class Word:
-    # コンストラクタ
-    # 入力
-    # word str型の単語
-    def __init__(self, word):
+
+class Word(UserString):
+    """Word クラス
+
+    Args:
+        word: 単語
+    """
+    def __init__(self, word: str):
         self.name = word.lower()
-        return
-    
-    # 単語のstr型を返す
-    def get_name(self):
-        return self.name
-    
-    # 与えられた文字列が一致するか確認する method
-    def match(self, word):
-        return self.name == word.lower()
-    
-    # word2vec で出力した vector をセットする
-    # 入力
-    # vector 数値ベクトル.リスト型でも可能
-    def set_vector(self, vector):
-        self.vector = np.array(vector)
-        return
-    
-    # vector を出力する
-    def get_vector(self):
-        return np.array(self.vector)
-    
-    # 所属確率最大の cluster のインデックスをセットする
-    def set_cluster_idx(self, idx):
-        self.cluster_idx = idx
-        return
-    
-    # cluster_idx を出力する
-    def get_cluster_idx(self):
-        return self.cluster_idx
-    
-    # 各clusterへの所属確率をセットする
-    # 入力
-    # probability numpy型
-    def set_cluster_probability(self, probability):
-        self.cluster_probability = probability
-        return
-    
-    # cluster_probability を出力する
-    def get_cluster_probability(self):
-        return self.cluster_probability
-    
-    # idf 値をセットする
-    def set_idf(self, idf):
-        self.idf = idf
-        return
-    
-    # idf 値を出力する
-    def get_idf(self):
-        return self.idf
-    
-    # 各 cluster への所属確率にidf値をかけたものをconcatnateしたベクトルを出力する
-    # 入力
-    # lst_clustered_prob 各クラスターへの所属確率のリスト
-    def calc_clustered_vector(self):        
-        # 各 cluster への所属確率にidf値をかけてconcatenate
-        clustered_vector = np.array([self.get_idf()*clustered_prob*self.get_vector() for clustered_prob in self.get_cluster_probability()]).flatten()
-        
-        return clustered_vector
-    
-    # clustered_vector のセット
-    def set_clustered_vector(self, clustered_vector):
-        self.clustered_vector = clustered_vector.copy()
-        return
-    
-    # clustered_vector の取得
-    def get_clustered_vector(self):
-        return self.clustered_vector
+        self._word = word.lower()
+
+    def __str__(self):
+        return self._word
+
+    def __eq__(self, word):
+        return self._word == word.lower()
+
+    @property
+    def vector(self):
+        return self._vector
+
+    @vector.setter
+    def vector(self, vec: np.array):
+        self._vector = vec
+
+    @property
+    def cluster_idx(self):
+        """所属確率最大の cluster のインデックス"""
+        return self._cluster_idx
+
+    @cluster_idx.setter
+    def cluster_idx(self, cluster_idx: int):
+        self._cluster_idx = cluster_idx
+
+    @property
+    def cluster_probability(self):
+        """各clusterへの所属確率をセットする"""
+        return self._cluster_probability
+
+    @cluster_probability.setter
+    def cluster_probability(self, probability: np.array):
+        self._cluster_probability = probability
+
+    @property
+    def idf(self):
+        return self._idf
+
+    @idf.setter
+    def idf(self, idf: float):
+        self._idf = idf
+
+    @property
+    def clustered_vector(self):
+        """各 cluster への所属確率にidf値をかけたものをconcatnateしたベクトル"""
+        output = np.array([
+            self.idf * clustered_prob * self.vector
+            for clustered_prob in self.cluster_probability
+        ]).flatten()
+        return output

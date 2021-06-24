@@ -100,25 +100,23 @@ class TestScdv(unittest.TestCase):
     # set_word2VecModel のテスト
     def test_SCDV_set_word2VecModel(self):
         lst_lst_word = [["a", "b"], ["c", "d", "e", ""], ["a"]]
-        
         model = SCDV()
         model.set_vocabulary(lst_lst_word)
-        
+
         # word2vec 作成
         model.make_word2VecModel(lst_lst_word, min_word_count=2)
         # set
         model.set_word2Vec()
-        
         vec_model = model.word2vec
-        
+
         # vocabulary 中の全単語に対してベクトルが定義されているか確認する
         # 定義されていない単語は vocabulary から削除されているはずなのででない
         for word in model.vocabulary:
             try:
-                word.get_vector()
-                
+                word.vector
+
                 # モデルにおけるベクトルとWord class におけるベクトルは等しいか確認する
-                self.assertTrue((vec_model[word.get_name()] == word.get_vector()).all)
+                self.assertTrue((vec_model[str(word)] == word.vector).all)
             except NameError:
                 self.assertTrue(False)
         return
@@ -168,79 +166,78 @@ class TestScdv(unittest.TestCase):
     def test_SCDV_set_cluster(self):
         lst_lst_word = [["a", "b"], ["c", "d", "e", ""], ["a"]]
         num_cluster = 3
-        
+
         model = SCDV(num_cluster=num_cluster)
         model.set_vocabulary(lst_lst_word)
-        
+
         # word2vec 作成
         model.make_word2VecModel(lst_lst_word)
         # set
         model.set_word2Vec()
-        
+
         # clustering model の作成
         model.make_clusterModel()
         model.set_cluster()
         idx_cluster, idx_proba = model.calc_cluster_probability()
-        
+
         for idx, word in enumerate(model.vocabulary):
-            self.assertEqual(word.get_cluster_idx(), idx_cluster[idx])
-            self.assertTrue((word.get_cluster_probability==idx_proba).all)
+            self.assertEqual(word.cluster_idx, idx_cluster[idx])
+            self.assertTrue((word.cluster_probability == idx_proba).all)
         return
 
     # calc_idf_by_word のテスト
     def test_SCDV_calc_idf_by_word(self):
         lst_lst_word = [["apple", "banana"], ["corch", "banana", "empty", ""], ["apple"]]
-        
+
         model = SCDV()
         model.set_vocabulary(lst_lst_word)
-        
+
         # idf値算出
         feature_names, _ = model.calc_idf_by_word(lst_lst_word)
-        
+
         # 各単語のidf値はvocaburalyに存在する単語か
         for word in feature_names:
             self.assertTrue(word in model.get_vocabulary())
         return
 
-    # set_idf のテスト
-    def test_SCDV_set_idf(self):
+    def test_set_idf(self):
         lst_lst_word = [["apple", "banana"], ["corch", "banana", "empty", ""], ["apple", "I"]]
-        
+
         model = SCDV()
         model.set_vocabulary(lst_lst_word)
-        
+
         # idf 値算出
         feature_names, idf = model.calc_idf_by_word(lst_lst_word)
         model.set_idf(feature_names, idf)
-        
+
         # idf値が設定されている vocabulary に対し、値は一致するか
         for word in model.vocabulary:
-            idf_word = word.get_idf()
+            idf_word = word.idf
             # idf値が設定されている場合に値のチェック
             if idf_word != 0:
-                self.assertTrue((idf_word == idf[feature_names.index(word.get_name())]).all)
+                self.assertTrue((idf_word == idf[feature_names.index(str(word))]).all)
         return
 
     # make_clustered_vector のテスト
     def test_SCDV_make_clustered_vector(self):
         lst_lst_word = [["apple", "banana"], ["corch", "banana", "empty", ""], ["apple"]]
         num_cluster = 3
-        
-        model = SCDV(num_cluster = num_cluster)
+
+        model = SCDV(num_cluster=num_cluster)
         model.set_vocabulary(lst_lst_word)
-        
+
         # word2vec 作成
         model.make_word2VecModel(lst_lst_word)
         model.set_word2Vec()
-        
+
         # clustering model の作成
         model.make_clusterModel()
         model.set_cluster()
-        
+
         # idf 値算出・セット
         feature_names, idf = model.calc_idf_by_word(lst_lst_word)
         model.set_idf(feature_names, idf)
-        
+
         # clustered_vector の算出
         model.make_clustered_vector()
         return
@@ -249,12 +246,12 @@ class TestScdv(unittest.TestCase):
     def test_SCDV_set_document(self):
         lst_lst_word = [["apple", "banana"], ["corch", "banana", "empty", ""], ["apple"]]
         remove_word= "banana"
-        
+
         model = SCDV()
         model.set_vocabulary(lst_lst_word)
         model.remove_vocabulary(remove_word)
         model.set_documents(lst_lst_word)
-        
+
         # document の数は一致するか
         self.assertEqual(len(lst_lst_word), len(model.documents))
         # 各単語は一致するか
@@ -264,41 +261,44 @@ class TestScdv(unittest.TestCase):
             if remove_word in lst_word:
                 lst_word.remove(remove_word)
             self.assertEqual(len(document.words), len(lst_word))
-            
+
             for word in lst_word:
                 self.assertTrue(document.isExist_word(word))
-        return
+
 
     # make_meanDocumentVector のテスト
     def test_SCDV_make_meanDocumentVector(self):
         lst_lst_word = [["apple", "banana"], ["corch", "banana", "empty", ""], ["apple"]]
         num_cluster = 3
         embedding_dimension = 100
-        
-        model = SCDV(num_cluster=num_cluster,embedding_dimension=embedding_dimension)
+
+        model = SCDV(
+            num_cluster = num_cluster,
+            embedding_dimension = embedding_dimension
+        )
         model.set_vocabulary(lst_lst_word)
-        
+
         # word2vec 作成
         model.make_word2VecModel(lst_lst_word)
         model.set_word2Vec()
-        
+
         # cluster 作成
         model.make_clusterModel()
         model.set_cluster()
-        
+
         # idf 値算出
         feature_names, idf = model.calc_idf_by_word(lst_lst_word)
         model.set_idf(feature_names, idf)
-        
+
         # clustered_vector の算出
         model.make_clustered_vector()
-        
+
         # Document セット
         model.set_documents(lst_lst_word)
-        
+
         # 平均ベクトルセット
         model.make_meanDocumentVector()
-        
+
         # 各ベクトルの次元が一致するか確認
         for document in model.get_documents():
             self.assertEqual(document.get_meanWordVector().shape[0], num_cluster*embedding_dimension)
