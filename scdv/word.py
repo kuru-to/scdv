@@ -10,14 +10,15 @@ class Word(UserString):
         word: 単語
     """
     def __init__(self, word: str):
+        super().__init__(word.lower())
         self.name = word.lower()
-        self._word = word.lower()
 
-    def __str__(self):
-        return self._word
+    def __repr__(self):
+        return "Word<'{:}'>".format(str(self))
 
     def __eq__(self, word):
-        return self._word == word.lower()
+        """他の単語との比較"""
+        return str(self) == str(word).lower()
 
     @property
     def vector(self):

@@ -2,7 +2,7 @@
 from typing import List
 
 import numpy as np
-from scdv.word import Word
+from scdv.vocabulary import Vocabulary
 
 
 class Document:
@@ -10,59 +10,50 @@ class Document:
 
     Args:
         idx: document id
-        lst_word: document に格納されている単語のリスト
+        lst_idx_words_in_vocab: `Vocabulary` class での単語のインデックス.
+            この値をもとに単語のidf値, および単語ベクトルを取得する
     """
-    def __init__(self, idx: int, lst_word: List[Word]):
+    def __init__(self, idx: int, lst_idx_words_in_vocab: List[int] = []):
         self._id = idx
-        self.words = lst_word
+        self._lst_idx_words_in_vocab = lst_idx_words_in_vocab
 
     @property
     def id(self):
         return self._id
 
-    # 単語のリストを返す
-    def get_words(self):
-        return [word.name for word in self.words]
+    def __repr__(self):
+        str_id = ",".join(self._lst_idx_words_in_vocab)
+        return "Document< id : {0}, index : [{1}]>".format(self.id, str_id)
 
-    # 指定した単語がDocumentに存在するか確認する
-    # 入力
-    # word str型の単語
-    def isExist_word(self, word):
-        for w in self.words:
-            if w == word:
-                return True
-        return False
+    def get_words(self, vocab: Vocabulary):
+        return [vocab[idx] for idx in self._lst_idx_words_in_vocab]
 
-    # 所属する各単語を平均化する
-    def calc_meanWordVector(self):
-        count = 1
-        sumWordVector = self.words[0].clustered_vector
-        for word in self.words[1:]:
-            sumWordVector += word.clustered_vector
-            count += 1
+    @property
+    def mean_word_vector(self):
+        return self._mean_word_vector
 
-        return sumWordVector / count
+    @mean_word_vector.setter
+    def mean_word_vector(self, mean_word_vector: np.array):
+        self._mean_word_vector = mean_word_vector
 
-    # 所属する各単語の平均ベクトルをセット
-    def set_meanWordVector(self, vec):
-        self.meanWordVector = vec
+    def set_sparce_mean_vector(self, threshold: float, vocab: Vocabulary):
+        """平均ベクトルのスパース化
 
-    # 平均ベクトルを取得
-    def get_meanWordVector(self):
-        return self.meanWordVector
+        Args:
+            threshold 閾値. この値より絶対値が小さければ0にする
 
-    # 平均ベクトルをスパース化する
-    # 入力
-    # threshold 閾値.この値より絶対値が小さければ0にする
-    def calc_sparceMeanVector(self, threshold):
-        meanVector = self.get_meanWordVector()
-        return np.where(np.abs(meanVector) < threshold, 0, meanVector)
+        Attributes:
+            _sparce_mean_vector: SCDV で求めたい文書ベクトル
+        """
+        mean_vector = self.mean_word_vector(vocab)
+        self._sparce_mean_vector = np.where(
+            np.abs(mean_vector) < threshold, 0, mean_vector
+        )
 
-    # sparce vector をセット
-    def set_sparceMeanVector(self, vec):
-        self.sparceMeanVector = vec
-        return
+    @property
+    def sparce_mean_vector(self):
+        return self._sparce_mean_vector
 
-    # sparce vector を取得
-    def get_sparceMeanVector(self):
-        return self.sparceMeanVector
+    @sparce_mean_vector.setter
+    def sparce_mean_vector(self, sparce_mean_vector: np.array):
+        self._sparce_mean_vector = sparce_mean_vector

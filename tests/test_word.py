@@ -22,15 +22,11 @@ class TestWord(unittest.TestCase):
         word = "A"
         model = Word(word)
         self.assertEqual(model, word)
+        self.assertEqual(model, "a")
 
         # 異なる場合
         word_notMatch = "b"
         self.assertNotEqual(model, word_notMatch)
-
-    def test_name(self):
-        name = "a"
-        word = Word(name)
-        self.assertTrue(word.name, name)
 
     def test_idf(self):
         name = "apple"
@@ -56,14 +52,18 @@ class TestWord(unittest.TestCase):
 
         clustered_vector = word.clustered_vector
 
-        self.assertEqual(clustered_vector.shape[0], vector.shape[0] * cluster_probability.shape[0])
+        self.assertEqual(
+            clustered_vector.shape[0],
+            vector.shape[0] * cluster_probability.shape[0]
+        )
         # 各値が等しいか確認する
         for idx_cluster_probability, prob in enumerate(cluster_probability):
             for idx_vector, value in enumerate(vector):
-                test_value = clustered_vector[idx_vector + idx_cluster_probability*vector.shape[0]]
+                test_value = clustered_vector[
+                    idx_vector + idx_cluster_probability * vector.shape[0]
+                ]
                 true_value = idf*value*prob
                 self.assertEqual(test_value, true_value)
-        return
 
 
 if __name__ == "__main__":
