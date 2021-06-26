@@ -2,7 +2,8 @@
 from typing import List
 
 import numpy as np
-from scdv.vocabulary import Vocabulary
+
+from scdv.word import Word
 
 
 class Document:
@@ -10,45 +11,40 @@ class Document:
 
     Args:
         idx: document id
-        lst_idx_words_in_vocab: `Vocabulary` class での単語のインデックス.
+        lst_word: 単語リスト. idf値, 単語ベクトルが格納されている
             この値をもとに単語のidf値, および単語ベクトルを取得する
     """
-    def __init__(self, idx: int, lst_idx_words_in_vocab: List[int] = []):
+    def __init__(self, idx: int, lst_word: List[Word]):
         self._id = idx
-        self._lst_idx_words_in_vocab = lst_idx_words_in_vocab
+        self._lst_word = lst_word
 
     @property
     def id(self):
         return self._id
 
+    @property
+    def lst_word(self):
+        return self._lst_word
+
     def __repr__(self):
-        str_id = ",".join(self._lst_idx_words_in_vocab)
+        str_id = ",".join(self._lst_word)
         return "Document< id : {0}, index : [{1}]>".format(self.id, str_id)
 
-    def get_words(self, vocab: Vocabulary):
-        return [vocab[idx] for idx in self._lst_idx_words_in_vocab]
+    def calc_mean_word_vector(self):
+        """文書中の各単語のベクトルの平均を取る
+        """
+        lst_word = self.lst_word
+        count = len(lst_word)
+        sumWordVector = lst_word[0].clustered_vector
+        for word in lst_word[1:]:
+            sumWordVector += word.clustered_vector
+        return sumWordVector / count
 
     @property
     def mean_word_vector(self):
+        if not hasattr(self, "_mean_word_vector"):
+            self._mean_word_vector = self.calc_mean_word_vector()
         return self._mean_word_vector
-
-    @mean_word_vector.setter
-    def mean_word_vector(self, mean_word_vector: np.array):
-        self._mean_word_vector = mean_word_vector
-
-    def set_sparce_mean_vector(self, threshold: float, vocab: Vocabulary):
-        """平均ベクトルのスパース化
-
-        Args:
-            threshold 閾値. この値より絶対値が小さければ0にする
-
-        Attributes:
-            _sparce_mean_vector: SCDV で求めたい文書ベクトル
-        """
-        mean_vector = self.mean_word_vector(vocab)
-        self._sparce_mean_vector = np.where(
-            np.abs(mean_vector) < threshold, 0, mean_vector
-        )
 
     @property
     def sparce_mean_vector(self):

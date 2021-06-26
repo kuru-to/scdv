@@ -16,30 +16,30 @@ class TestVocabulary(unittest.TestCase):
         self._lst_lst_word = [
             ["a", "b"], ["c", "d", "e", ""], ["a"]
         ]
+        self._vocab = Vocabulary(self._lst_lst_word)
 
     def tearDown(self):
         """Tear down test fixtures, if any."""
 
-    def test_remove(self):
+    def test_del(self):
         """
         テスト項目:
             * 削除したい単語が消えているか
             * 削除したくない単語が消えていないか
         """
-        remove_word = "a"
+        del_word = "a"
 
-        vocab = Vocabulary(self._lst_lst_word)
-        vocab.remove(remove_word)
+        del self._vocab[del_word]
 
         set_answer = set(itertools.chain.from_iterable(
             self._lst_lst_word
         ))
-        set_answer.remove(remove_word)
+        set_answer.remove(del_word)
 
-        self.assertNotIn(remove_word, vocab)
+        self.assertNotIn(del_word, self._vocab.keys())
 
         for ans in set_answer:
-            self.assertIn(ans, vocab)
+            self.assertIn(ans, self._vocab.keys())
 
 
 if __name__ == "__main__":

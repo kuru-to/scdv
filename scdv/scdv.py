@@ -1,9 +1,6 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 """ Main module.
-
-todo:
-    * init で設定される threshold はなんの閾値？
 """
 from typing import List, Union
 import copy
@@ -25,20 +22,18 @@ class SCDV:
         lst_lst_word: 文書ごとの単語のリスト, のリスト
         num_cluster: クラスタ数
         random_seed: 乱数の種
-        threshold: 閾値
+        threshold: sparce な vector を作成する際に0にする閾値
         embedding_dimension: Word vector dimensionality
         max_iter: Gausian Mixture Model 作成時の反復回数最大値
     """
     def __init__(
         self,
-        lst_lst_word: List[List[str]] = [],
         num_cluster: int = 60,
         random_seed: int = 0,
         threshold: float = 0.01,
         embedding_dimension: int = 200,
         max_iter: int = 50
     ):
-        self._lst_lst_word = copy.deepcopy(lst_lst_word)
         self._num_cluster = num_cluster
         self._random_seed = random_seed
         self._threshold = threshold
@@ -48,6 +43,14 @@ class SCDV:
     @property
     def lst_lst_word(self):
         return copy.deepcopy(self._lst_lst_word)
+
+    @lst_lst_word.setter
+    def lst_lst_word(self, lst_lst_word: List[List[str]]):
+        """
+        Attributes:
+            lst_lst_word: 文書ごとの単語のリスト, のリスト
+        """
+        self._lst_lst_word = copy.deepcopy(lst_lst_word)
 
     def set_vocabulary(self):
         """ Setter of vocabulary
@@ -67,7 +70,7 @@ class SCDV:
         Args:
             word: 削除したい単語
         """
-        self.vocabulary.remove(word)
+        del self.vocabulary[str(word)]
 
     def make_word2VecModel(
         self,
@@ -130,7 +133,7 @@ class SCDV:
             * word vector が作成されていれば格納
             * word vector が作成されていない単語であれば、vocabulary から remove
         """
-        for word in self.vocabulary:
+        for word in self.vocabulary.values():
             try:
                 word.vector = self.word2Vec_model[str(word)]
             except KeyError:
@@ -144,7 +147,7 @@ class SCDV:
         """
         word_vectors = np.concatenate([
                 np.array(word.vector).reshape([1, self._embedding_dimension])
-                for word in self.vocabulary
+                for word in self.vocabulary.values()
             ], axis=0
         )
         return word_vectors
@@ -193,7 +196,7 @@ class SCDV:
         """clustering の結果を各単語にセット"""
         idx_cluster, idx_proba = self.calc_cluster_probability()
 
-        for idx, word in enumerate(self.vocabulary):
+        for idx, word in enumerate(self.vocabulary.values()):
             word.cluster_idx = idx_cluster[idx]
             word.cluster_probability = idx_proba[idx]
 
@@ -236,7 +239,7 @@ class SCDV:
         # for文の中で語彙を削除するとfor文が回らなくなってしまうので,
         # 削除する単語は別だし
         lst_remove = []
-        for w in self.vocabulary:
+        for w in self.vocabulary.values():
             try:
                 idx = lst_word.index(str(w))
                 w.idf = lst_idf[idx]
@@ -244,44 +247,25 @@ class SCDV:
                 lst_remove.append(w)
 
         for removed_word in lst_remove:
-            self.vocabulary.remove(removed_word)
+            del self.vocabulary[removed_word]
 
     def set_documents(self):
         """文書のセッティング
 
         Note:
-            * 各単語が語彙の何番のインデックスかを計算して入力とする
+            * `vocabulary` 中の `Word` class を文書に格納する
         """
         self._documents = []
         for idx, lst_word in enumerate(self.lst_lst_word):
-            # Vocabulary 中でのインデックスを格納しておく
-            lst_idx_words_in_vocab = [
-                idx for idx, vocab in enumerate(self.vocabulary)
-                if vocab in lst_word
+            lst_word_in_doc = [
+                self.vocabulary[word.lower()] for word in lst_word
+                if word.lower() in self.vocabulary.keys()
             ]
-            self._documents.append(Document(idx, lst_idx_words_in_vocab))
+            self._documents.append(Document(idx, lst_word_in_doc))
 
     @property
     def documents(self):
         return self._documents
-
-    def calc_mean_word_vector(self, doc: Document):
-        """文書中の各単語のベクトルの平均を取る
-
-        Args:
-            doc: 参照する文書
-        """
-        count = len(doc._lst_idx_words_in_vocab)
-        words = doc.get_words(self.vocabulary)
-        sumWordVector = words[0].clustered_vector
-        for word in words[1:]:
-            sumWordVector += word.clustered_vector
-        return sumWordVector / count
-
-    def set_mean_word_vector(self):
-        """各文書に単語ベクトルの平均を set"""
-        for doc in self.documents:
-            doc.mean_word_vector = self.calc_mean_word_vector(doc)
 
     def calc_sparce_mean_vector(self, doc: Document):
         """文書の sparce mean vector の計算"""
@@ -291,14 +275,15 @@ class SCDV:
     def set_sparce_mean_vector(self):
         """各文書に sparce mean vector を set"""
         for doc in self.documents:
-            doc.sparce_mean_vector = self.calc_mean_word_vector(doc)
+            doc.sparce_mean_vector = self.calc_sparce_mean_vector(doc)
 
-    def train(self):
+    def train(self, lst_lst_word: List[List[str]]):
         """ SCDV 実行して文書ベクトルの作成
 
         Note:
             * 文書ベクトルは `Document` クラスをセットしてしまえば計算可能
         """
+        self.lst_lst_word = lst_lst_word
         self.set_vocabulary()
 
         # word2vec 作成
@@ -316,9 +301,7 @@ class SCDV:
         # Document セット
         self.set_documents()
 
-        # 各文書中の単語ベクトルの平均算出
-        self.set_mean_word_vector()
-
+        # mean word vector の計算は documents の内部で行われる
         # sparce mean vector set
         self.set_sparce_mean_vector()
 

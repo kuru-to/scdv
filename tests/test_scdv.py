@@ -20,10 +20,10 @@ class TestScdv(unittest.TestCase):
         self._embedding_dimension = 100
         self._num_cluster = 3
         self._aSCDV = SCDV(
-            self._lst_lst_word,
             embedding_dimension=self._embedding_dimension,
             num_cluster=self._num_cluster
         )
+        self._aSCDV.lst_lst_word = self._lst_lst_word
         self._aSCDV.set_vocabulary()
 
     def tearDown(self):
@@ -58,7 +58,7 @@ class TestScdv(unittest.TestCase):
 
         self.assertEqual(vec_model.wv.syn0.shape[1], self._embedding_dimension)
 
-        for word in self._aSCDV.vocabulary:
+        for word in self._aSCDV.vocabulary.values():
             self.assertTrue((vec_model[str(word)] == word.vector).all)
 
         word_vectors = self._aSCDV.get_word2Matrix()
@@ -87,7 +87,7 @@ class TestScdv(unittest.TestCase):
         # clustering 結果のセット
         self._aSCDV.set_cluster()
 
-        for idx, word in enumerate(self._aSCDV.vocabulary):
+        for idx, word in enumerate(self._aSCDV.vocabulary.values()):
             self.assertEqual(word.cluster_idx, idx_cluster[idx])
             self.assertTrue((word.cluster_probability == idx_proba).all)
 
@@ -105,7 +105,7 @@ class TestScdv(unittest.TestCase):
 
         self._aSCDV.set_idf(feature_names, idf)
 
-        for word in self._aSCDV.vocabulary:
+        for word in self._aSCDV.vocabulary.values():
             idf_word = word.idf
             # idf値が設定されている場合に値のチェック
             if idf_word != 0:
@@ -119,10 +119,7 @@ class TestScdv(unittest.TestCase):
         self._aSCDV.set_documents()
         for idx, lst_word in enumerate(self._lst_lst_word):
             test_doc = self._aSCDV.documents[idx]
-            test_words = [
-                str(w)
-                for w in test_doc.get_words(self._aSCDV.vocabulary)
-            ]
+            test_words = [str(w) for w in test_doc.lst_word]
             self.assertEqual(set(lst_word), set(test_words))
 
     def test_train(self):
@@ -130,7 +127,7 @@ class TestScdv(unittest.TestCase):
         テスト項目:
             * SCDVの次元が 単語ベクトルの次元数 * クラスタ数と一致するか確認
         """
-        self._aSCDV.train()
+        self._aSCDV.train(self._lst_lst_word)
 
         # 各ベクトルの次元が一致するか確認
         for idx in range(len(self._aSCDV.documents)):
